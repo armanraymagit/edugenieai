@@ -4,7 +4,15 @@
 
 ## Run Locally
 1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+   ```bash
+   npm install
+   ```
+2. Set up environment variables:
+   ```bash
+   cp .env.example .env
+   ```
+   Then, add your `GEMINI_API_KEY` to the `.env` file.
 3. Run the app:
-   `npm run dev`
+   ```bash
+   npm run dev
+   ```
