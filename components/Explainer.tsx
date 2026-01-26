@@ -19,7 +19,7 @@ const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
 
 const Explainer: React.FC<ExplainerProps> = ({ onInteraction }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: "Hi! I'm your NLP Study Buddy. I can explain any concept, simplify your notes, or help you brainstorm ideas. What are we learning today?" }
+    { role: 'assistant', content: "Hi! I'm EduGenie, your AI Study Buddy. I can explain any concept, simplify your notes, or help you brainstorm ideas. What are we learning today?" }
   ]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
