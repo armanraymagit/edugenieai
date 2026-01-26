@@ -7,6 +7,7 @@ import Explainer from './components/Explainer';
 import Summarizer from './components/Summarizer';
 import FlashcardsView from './components/FlashcardsView';
 import QuizView from './components/QuizView';
+import LectureBuddy from './components/LectureBuddy';
 
 const STORAGE_KEY = 'edugenie_study_data_v2';
 
@@ -28,13 +29,13 @@ const INITIAL_STATS = {
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
-  
+
   // Initialize state from localStorage or defaults
   const [chartData, setChartData] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved).chartData : INITIAL_CHART_DATA;
   });
-  
+
   const [stats, setStats] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved).stats : INITIAL_STATS;
@@ -72,7 +73,7 @@ const App: React.FC = () => {
 
   const updateQuizMetrics = (score: number, total: number) => {
     const percentage = (score / total) * 100;
-    
+
     setStats(prev => {
       const newQuizzesTaken = prev.quizzesTaken + 1;
       const newAvgScore = Math.round(((prev.avgScore * prev.quizzesTaken) + percentage) / newQuizzesTaken);
@@ -91,8 +92,8 @@ const App: React.FC = () => {
     switch (activeView) {
       case 'dashboard':
         return (
-          <Dashboard 
-            onViewChange={setActiveView} 
+          <Dashboard
+            onViewChange={setActiveView}
             chartData={chartData}
             stats={{
               studyMinutes: stats.studyMinutes,
@@ -113,6 +114,9 @@ const App: React.FC = () => {
         return <FlashcardsView onSessionComplete={() => updateStudyProgress(15)} />;
       case 'quiz':
         return <QuizView onQuizComplete={updateQuizMetrics} />;
+      case 'lectureBuddy':
+        // Processing a lecture adds 20 mins
+        return <LectureBuddy onProcessed={() => updateStudyProgress(20)} />;
       default:
         return <Dashboard onViewChange={setActiveView} chartData={chartData} stats={stats} onReset={handleResetDashboard} />;
     }
@@ -121,10 +125,10 @@ const App: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
       <Sidebar activeView={activeView} onViewChange={setActiveView} />
-      
+
       <main className="flex-1 flex flex-col h-screen overflow-hidden lg:ml-64 transition-all">
         <header className="lg:hidden h-16 bg-white border-b flex items-center justify-between px-4 sticky top-0 z-10">
-           <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">E</div>
             <span className="font-display font-bold text-lg text-indigo-900">EduGenie</span>
           </div>

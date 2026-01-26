@@ -3,6 +3,7 @@ export interface Flashcard {
   id: string;
   front: string;
   back: string;
+  imageUrl?: string;
 }
 
 export interface QuizQuestion {
@@ -11,6 +12,7 @@ export interface QuizQuestion {
   options: string[];
   correctAnswer: string;
   explanation: string;
+  imageUrl?: string;
 }
 
 export interface StudyNote {
@@ -21,7 +23,7 @@ export interface StudyNote {
   timestamp: number;
 }
 
-export type View = 'dashboard' | 'explainer' | 'summarizer' | 'flashcards' | 'quiz';
+export type View = 'dashboard' | 'explainer' | 'summarizer' | 'flashcards' | 'quiz' | 'lectureBuddy';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';

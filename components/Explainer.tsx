@@ -1,6 +1,5 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { ChatMessage } from '../types';
 
 interface ExplainerProps {
@@ -15,6 +14,9 @@ const SUGGESTIONS = [
   "Explain the Pythagorean Theorem"
 ];
 
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
+
 const Explainer: React.FC<ExplainerProps> = ({ onInteraction }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'assistant', content: "Hi! I'm your NLP Study Buddy. I can explain any concept, simplify your notes, or help you brainstorm ideas. What are we learning today?" }
@@ -22,21 +24,7 @@ const Explainer: React.FC<ExplainerProps> = ({ onInteraction }) => {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const chatSessionRef = useRef<any>(null);
-
-  const getChatSession = () => {
-    if (!chatSessionRef.current) {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
-      chatSessionRef.current = ai.chats.create({
-        model: 'gemini-3-flash-preview',
-        config: {
-          systemInstruction: "You are a friendly, world-class academic tutor. Use the Feynman Technique. Encourage follow-up questions.",
-          temperature: 0.8,
-        },
-      });
-    }
-    return chatSessionRef.current;
-  };
+  const conversationHistoryRef = useRef<ChatMessage[]>([]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -49,27 +37,62 @@ const Explainer: React.FC<ExplainerProps> = ({ onInteraction }) => {
     if (!textToSend || isTyping) return;
 
     setInput('');
-    setMessages(prev => [...prev, { role: 'user', content: textToSend }]);
+    const userMessage: ChatMessage = { role: 'user', content: textToSend };
+    setMessages(prev => [...prev, userMessage]);
+    conversationHistoryRef.current.push(userMessage);
     setIsTyping(true);
     if (onInteraction) onInteraction();
 
     try {
-      const chat = getChatSession();
-      const stream = await chat.sendMessageStream({ message: textToSend });
-      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+      const context = conversationHistoryRef.current
+        .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
+        .join('\n\n');
 
+      const prompt = `${context}\n\nUser: ${textToSend}\n\nAssistant:`;
+
+      const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: OLLAMA_MODEL,
+          prompt: prompt,
+          stream: true,
+          system: "You are a friendly, world-class academic tutor. Use the Feynman Technique. Encourage follow-up questions.",
+          options: { temperature: 0.8 },
+        }),
+      });
+
+      if (!response.ok) throw new Error('Ollama API error');
+
+      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
       let fullResponse = '';
-      for await (const chunk of stream) {
-        const responseChunk = chunk as GenerateContentResponse;
-        fullResponse += responseChunk.text || '';
-        setMessages(prev => {
-          const updated = [...prev];
-          updated[updated.length - 1] = { role: 'assistant', content: fullResponse };
-          return updated;
-        });
+
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n').filter(line => line.trim());
+          for (const line of lines) {
+            try {
+              const data = JSON.parse(line);
+              if (data.response) {
+                fullResponse += data.response;
+                setMessages(prev => {
+                  const updated = [...prev];
+                  updated[updated.length - 1] = { role: 'assistant', content: fullResponse };
+                  return updated;
+                });
+              }
+            } catch (e) { }
+          }
+        }
       }
+      conversationHistoryRef.current.push({ role: 'assistant', content: fullResponse });
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "Oops! My brain hit a snag. Could you try again?" }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: "Oops! Ollama isn't responding. Is it running?" }]);
     } finally {
       setIsTyping(false);
     }
@@ -77,7 +100,7 @@ const Explainer: React.FC<ExplainerProps> = ({ onInteraction }) => {
 
   const clearChat = () => {
     if (window.confirm("Clear this conversation history?")) {
-      chatSessionRef.current = null;
+      conversationHistoryRef.current = [];
       setMessages([{ role: 'assistant', content: "Fresh start! What concept should we tackle now?" }]);
     }
   };
