@@ -19,9 +19,16 @@ Run powerful AI models locally on your machine. Best for privacy and offline use
 2.  **Pull Required Models**:
     Open your terminal:
     ```bash
-    ollama pull llama3.2    # For chat, flashcards, quizzes
+    ollama pull llama3.1    # Recommended: Best for JSON generation (flashcards, quizzes)
+    # OR
+    ollama pull llama3.2    # Alternative option
+    # OR
+    ollama pull mistral     # Another good option for structured output
+    
     ollama pull llava       # For image summarization
     ```
+    
+    **Note**: `llama3.1` is recommended for better JSON/structured output generation. If you get errors, try `mistral` or `qwen2.5`.
 
 3.  **Start Ollama**:
     Ensure it's running in the background:
@@ -31,6 +38,12 @@ Run powerful AI models locally on your machine. Best for privacy and offline use
 
 4.  **Verify**:
     The app connects to `http://localhost:11434` by default. No API key needed!
+    
+    **Test your setup**:
+    ```bash
+    node test-ollama-flashcards.mjs
+    ```
+    This will test flashcard generation and suggest the best model if your current one isn't working.
 
 ---
 

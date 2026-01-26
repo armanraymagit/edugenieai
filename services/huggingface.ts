@@ -46,7 +46,10 @@ const generateText = async (prompt: string, systemPrompt?: string): Promise<stri
  * Generates an image based on a text prompt.
  */
 export const generateImage = async (prompt: string): Promise<string | null> => {
-    if (!HF_API_KEY) return null;
+    if (!HF_API_KEY) {
+        console.warn("HuggingFace API key not found. Images will not be generated.");
+        return null;
+    }
 
     // Enhance prompt for educational visual aid
     const enhancedPrompt = `educational illustration of ${prompt}, high quality, clean background, 4k resolution`;
@@ -61,7 +64,19 @@ export const generateImage = async (prompt: string): Promise<string | null> => {
             }
         );
 
-        if (!response.ok) return null;
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => 'Unknown error');
+            console.warn(`Image generation failed (${response.status}):`, errorText.substring(0, 200));
+            return null;
+        }
+
+        // Check if response is actually an image
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.startsWith('image/')) {
+            const errorText = await response.text().catch(() => 'Unknown error');
+            console.warn("Image generation returned non-image response:", errorText.substring(0, 200));
+            return null;
+        }
 
         const blob = await response.blob();
         return URL.createObjectURL(blob);

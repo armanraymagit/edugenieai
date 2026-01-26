@@ -5,7 +5,8 @@ import { Flashcard, QuizQuestion } from '../types';
 
 /**
  * Coordinator Service
- * Now uses Hugging Face for Flashcards and Quizzes primarily.
+ * Now uses Ollama for Flashcards and Quizzes.
+ * Uses HuggingFace only for image generation (Ollama doesn't support image generation).
  * Keeps Ollama for local-only fallbacks or simpler summaries.
  * GEMINI COMPLETELY REMOVED.
  */
@@ -27,17 +28,63 @@ export const summarizeImage = async (base64Data: string, mimeType: string): Prom
 };
 
 /**
- * Flashcard Generation - Now uses Hugging Face
+ * Flashcard Generation - Now uses Ollama
  */
 export const generateFlashcards = async (topic: string, content: string, count: number = 5, includeImages: boolean = false): Promise<Flashcard[]> => {
-    return HuggingFace.generateFlashcards(topic, content, count, includeImages);
+    const cards = await Ollama.generateFlashcards(topic, content, count, includeImages);
+    
+    // If images are requested, enhance cards with images using HuggingFace (Ollama doesn't generate images)
+    if (includeImages && cards.length > 0) {
+        try {
+            const imagePrompts = cards.map(card => card.front);
+            // Generate images with error handling - continue even if some fail
+            const images = await Promise.allSettled(
+                imagePrompts.map(prompt => HuggingFace.generateImage(prompt))
+            );
+            return cards.map((card, index) => ({
+                ...card,
+                imageUrl: images[index].status === 'fulfilled' && images[index].value 
+                    ? images[index].value 
+                    : undefined
+            }));
+        } catch (error) {
+            console.warn('Image generation failed, continuing without images:', error);
+            // Return cards without images if generation fails
+            return cards;
+        }
+    }
+    
+    return cards;
 };
 
 /**
- * Quiz Generation - Now uses Hugging Face
+ * Quiz Generation - Now uses Ollama
  */
 export const generateQuiz = async (topic: string, content: string, count: number = 5, includeImages: boolean = false): Promise<QuizQuestion[]> => {
-    return HuggingFace.generateQuiz(topic, content, count, includeImages);
+    const questions = await Ollama.generateQuiz(topic, content, count, includeImages);
+    
+    // If images are requested, enhance questions with images using HuggingFace (Ollama doesn't generate images)
+    if (includeImages && questions.length > 0) {
+        try {
+            const imagePrompts = questions.map(q => q.question);
+            // Generate images with error handling - continue even if some fail
+            const images = await Promise.allSettled(
+                imagePrompts.map(prompt => HuggingFace.generateImage(prompt))
+            );
+            return questions.map((question, index) => ({
+                ...question,
+                imageUrl: images[index].status === 'fulfilled' && images[index].value 
+                    ? images[index].value 
+                    : undefined
+            }));
+        } catch (error) {
+            console.warn('Image generation failed, continuing without images:', error);
+            // Return questions without images if generation fails
+            return questions;
+        }
+    }
+    
+    return questions;
 };
 
 /**

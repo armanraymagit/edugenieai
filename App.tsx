@@ -71,7 +71,7 @@ const App: React.FC = () => {
     }));
   };
 
-  const updateQuizMetrics = (score: number, total: number) => {
+  const updateQuizMetrics = (score: number, total: number, timeSpentMinutes: number) => {
     const percentage = (score / total) * 100;
 
     setStats(prev => {
@@ -84,8 +84,8 @@ const App: React.FC = () => {
       };
     });
 
-    // Quizzes also count as heavy study time (30 mins)
-    updateStudyProgress(30);
+    // Add actual time spent on quiz to study hours
+    updateStudyProgress(timeSpentMinutes);
   };
 
   const renderView = () => {
