@@ -1,6 +1,6 @@
 
 import React, { useState, useRef } from 'react';
-import { summarizeNotes, summarizeImage } from '../services/gemini';
+import { summarizeNotes, summarizeImage } from '../services/ai';
 
 interface SummarizerProps {
   onSummaryGenerated?: () => void;
@@ -15,7 +15,7 @@ const Summarizer: React.FC<SummarizerProps> = ({ onSummaryGenerated }) => {
 
   const handleSummarize = async () => {
     if (isLoading) return;
-    
+
     setIsLoading(true);
     try {
       let result = '';
@@ -88,17 +88,17 @@ const Summarizer: React.FC<SummarizerProps> = ({ onSummaryGenerated }) => {
 
             {filePreview ? (
               <div className="relative w-full h-96 bg-slate-50 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-indigo-200 p-4">
-                <button 
+                <button
                   onClick={() => setFilePreview(null)}
                   className="absolute top-2 right-2 p-2 bg-white rounded-full shadow-sm text-rose-500 hover:bg-rose-50 transition-colors"
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
                 {filePreview.type.startsWith('image/') ? (
                   <img src={`data:${filePreview.type};base64,${filePreview.data}`} alt="Preview" className="max-h-[80%] rounded-lg shadow-sm mb-4 object-contain" />
                 ) : (
                   <div className="text-indigo-600 mb-4">
-                    <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                    <svg className="w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                   </div>
                 )}
                 <p className="text-sm font-medium text-slate-600 truncate max-w-full px-4">{filePreview.name}</p>
@@ -115,7 +115,7 @@ const Summarizer: React.FC<SummarizerProps> = ({ onSummaryGenerated }) => {
             <div className="mt-4 flex space-x-3">
               <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/*,text/plain" />
               <button onClick={() => fileInputRef.current?.click()} className="flex-1 py-3 px-4 bg-white border border-slate-200 text-slate-600 rounded-xl font-semibold hover:bg-slate-50 transition-all flex items-center justify-center space-x-2">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
                 <span>Upload</span>
               </button>
               <button onClick={handleSummarize} disabled={isLoading || (!notes.trim() && !filePreview)} className="flex-[2] py-3 px-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:bg-slate-200 transition-all">
