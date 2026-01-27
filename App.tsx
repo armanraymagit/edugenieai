@@ -12,7 +12,7 @@ import LectureBuddy from './components/LectureBuddy';
 // Mobile Header with 3-dot menu
 const MobileHeader: React.FC<{ activeView: View; onViewChange: (view: View) => void }> = ({ activeView, onViewChange }) => {
   const [menuOpen, setMenuOpen] = useState(false);
-  
+
   const navItems: { id: View; label: string; icon: JSX.Element }[] = [
     {
       id: 'dashboard', label: 'Dashboard', icon: (
@@ -63,11 +63,11 @@ const MobileHeader: React.FC<{ activeView: View; onViewChange: (view: View) => v
           </svg>
         </button>
       </header>
-      
+
       {/* Mobile Menu Dropdown */}
       {menuOpen && (
         <>
-          <div 
+          <div
             className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40 mt-16"
             onClick={() => setMenuOpen(false)}
           />
@@ -79,11 +79,10 @@ const MobileHeader: React.FC<{ activeView: View; onViewChange: (view: View) => v
                   onViewChange(item.id);
                   setMenuOpen(false);
                 }}
-                className={`w-full flex items-center space-x-3 px-4 py-3 transition-colors ${
-                  activeView === item.id
+                className={`w-full flex items-center space-x-3 px-4 py-3 transition-colors ${activeView === item.id
                     ? 'bg-indigo-50 text-indigo-700'
                     : 'text-slate-700 hover:bg-slate-50'
-                }`}
+                  }`}
               >
                 {item.icon}
                 <span className="font-medium">{item.label}</span>
@@ -100,22 +99,8 @@ const MobileHeader: React.FC<{ activeView: View; onViewChange: (view: View) => v
 const Footer: React.FC = () => {
   return (
     <footer className="mt-auto border-t bg-white py-4 px-4 md:px-8">
-      <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center text-sm text-slate-600">
-        <div className="mb-2 md:mb-0">
-          <p>© 2026 <span className="font-semibold text-indigo-600">Arman</span>. All rights reserved.</p>
-        </div>
-        <div className="flex items-center space-x-4">
-          <a 
-            href="https://github.com/armanraymagit/edugenieai" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="hover:text-indigo-600 transition-colors"
-          >
-            GitHub
-          </a>
-          <span>•</span>
-          <span>MIT License</span>
-        </div>
+      <div className="max-w-6xl mx-auto flex justify-center items-center text-sm text-slate-600">
+        <p>© 2026 <span className="font-semibold text-indigo-600">Arman</span>. All rights reserved.</p>
       </div>
     </footer>
   );
@@ -240,11 +225,11 @@ const App: React.FC = () => {
 
       <main className="flex-1 flex flex-col min-h-screen lg:ml-64 transition-all">
         <MobileHeader activeView={activeView} onViewChange={setActiveView} />
-        
+
         <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-20 md:pb-8">
           {renderView()}
         </div>
-        
+
         <Footer />
       </main>
     </div>
