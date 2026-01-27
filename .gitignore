@@ -27,3 +27,6 @@ dist-ssr
 
 # Test files with secrets
 test-hf.mjs
+
+# Component tests
+components/components.test.tsx

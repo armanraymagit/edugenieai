@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { ChatMessage } from '../types';
 
 interface ExplainerProps {
@@ -121,8 +122,12 @@ const Explainer: React.FC<ExplainerProps> = ({ onInteraction }) => {
           {messages.map((msg, idx) => (
             <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] p-4 rounded-2xl ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-50 text-slate-800 rounded-tl-none border border-slate-100'}`}>
-                <div className="prose prose-sm max-w-none whitespace-pre-wrap leading-relaxed">
-                  {msg.content || (isTyping && idx === messages.length - 1 ? "..." : "")}
+                <div className="prose prose-sm max-w-none leading-relaxed">
+                  {msg.content ? (
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  ) : (
+                    isTyping && idx === messages.length - 1 ? "..." : ""
+                  )}
                 </div>
               </div>
             </div>
