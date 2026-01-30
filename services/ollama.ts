@@ -162,24 +162,24 @@ export const preloadModel = async (): Promise<void> => {
 };
 
 /**
- * Explain a concept to a student
+ * General Chat with AI (NLP)
+ * Handles standard conversation and queries.
  */
-export const explainConcept = async (
-  topic: string,
-  context: string = '',
+export const chatWithAI = async (
+  message: string,
+  history: string = '',
   onToken?: (token: string) => void
 ): Promise<string> => {
-  const prompt = `Explain the following concept to a student: "${topic}". 
-  ${context ? `Use this context: ${context}.` : ''} 
-  Provide a simple, clear explanation with examples. Use Markdown formatting for headings and lists.`;
+  // Construct a conversational prompt
+  const prompt = `${history}\nUser: ${message}\nAssistant:`;
 
   const request: OllamaGenerateRequest = {
     model: OLLAMA_MODEL,
     prompt,
     options: {
-      temperature: 0.7,
+      temperature: 0.8, // Slightly higher for creativity in chat
     },
-    system: "You are a world-class tutor who excels at simplifying complex topics using analogies and clear language."
+    system: "You are EduGenie, a friendly and helpful AI study companion. Engage in natural conversation, answer questions clearly, and help the user learn."
   };
 
   if (onToken) {
@@ -187,6 +187,29 @@ export const explainConcept = async (
   }
 
   return await callOllama(request);
+};
+
+/**
+ * Explain a concept to a student
+ * (kept for backward compatibility, but can alias to chatWithAI with specific instructions)
+ */
+export const explainConcept = async (
+  topic: string,
+  context: string = '',
+  onToken?: (token: string) => void
+): Promise<string> => {
+  // We can just use the chat function but inject the "Explain..." instruction into the message or prompt
+  // But for now, let's keep the specialized prompt if the user explicitly asks for an explanation via this specific API.
+  // However, since the UI calls this for *everything* in the Explainer, we should probably make IT the chat function.
+
+  // Let's UPDATE explainConcept to be more "chatty" if the input doesn't look like a strict concept query.
+  // Or better, we expose chatWithAI and update the UI to use it.
+
+  // For this refactor, I will introduce chatWithAI and keep explainConcept specialized for "Explain X" tasks 
+  // if we were distinguishing them, but the UI uses 'explainConcept' for the main chat.
+  // So I will redirect 'explainConcept' to 'chatWithAI' with a flexible prompt.
+
+  return chatWithAI(topic, context, onToken);
 };
 
 /**
