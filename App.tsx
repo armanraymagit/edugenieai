@@ -8,6 +8,7 @@ import Summarizer from './components/Summarizer';
 import FlashcardsView from './components/FlashcardsView';
 import QuizView from './components/QuizView';
 import LectureBuddy from './components/LectureBuddy';
+import { preloadModel } from './services/ai';
 
 // Mobile Header with 3-dot menu
 const MobileHeader: React.FC<{ activeView: View; onViewChange: (view: View) => void }> = ({ activeView, onViewChange }) => {
@@ -142,6 +143,11 @@ const App: React.FC = () => {
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ chartData, stats }));
   }, [chartData, stats]);
+
+  // Preload AI model to reduce TTFT
+  useEffect(() => {
+    preloadModel();
+  }, []);
 
   const handleResetDashboard = () => {
     setChartData(INITIAL_CHART_DATA);

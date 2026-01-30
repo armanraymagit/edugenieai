@@ -1,6 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { summarizeNotes, summarizeImage } from '../services/ai';
+import ReactMarkdown from 'react-markdown';
 
 interface SummarizerProps {
   onSummaryGenerated?: () => void;
@@ -17,19 +18,25 @@ const Summarizer: React.FC<SummarizerProps> = ({ onSummaryGenerated }) => {
     if (isLoading) return;
 
     setIsLoading(true);
+    setSummary(''); // Clear previous summary immediately
     try {
       let result = '';
+      const onToken = (token: string) => {
+        setSummary(prev => prev + token);
+      };
+
       if (filePreview && filePreview.type.startsWith('image/')) {
-        result = await summarizeImage(filePreview.data, filePreview.type);
+        result = await summarizeImage(filePreview.data, filePreview.type, onToken);
       } else if (filePreview && filePreview.type === 'text/plain') {
-        result = await summarizeNotes(filePreview.data);
+        result = await summarizeNotes(filePreview.data, onToken);
       } else if (notes.trim()) {
-        result = await summarizeNotes(notes);
+        result = await summarizeNotes(notes, onToken);
       } else {
         alert("Please provide some notes or upload a file first.");
         setIsLoading(false);
         return;
       }
+      // Ensure we have the full final result (though streaming should have built it)
       setSummary(result);
       if (onSummaryGenerated) onSummaryGenerated();
     } catch (error) {
@@ -70,6 +77,7 @@ const Summarizer: React.FC<SummarizerProps> = ({ onSummaryGenerated }) => {
     setFilePreview(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-fadeIn pb-12">
@@ -128,8 +136,8 @@ const Summarizer: React.FC<SummarizerProps> = ({ onSummaryGenerated }) => {
         <div className="space-y-4">
           <div className={`bg-white rounded-3xl shadow-sm border border-slate-100 p-6 h-full min-h-[500px] flex flex-col ${!summary ? 'justify-center items-center' : ''}`}>
             {summary ? (
-              <div className="prose prose-indigo prose-sm max-w-none whitespace-pre-wrap text-slate-700 leading-relaxed font-medium">
-                {summary}
+              <div className="prose prose-indigo prose-sm max-w-none text-slate-700 leading-relaxed font-medium">
+                <ReactMarkdown>{summary}</ReactMarkdown>
               </div>
             ) : (
               <div className="text-center p-8 text-slate-400">

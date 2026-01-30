@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { ChatMessage } from '../types';
+import { explainConcept, preloadModel } from '../services/ai';
 
 interface ExplainerProps {
   onInteraction?: () => void;
@@ -15,9 +16,6 @@ const SUGGESTIONS = [
   "Explain the Pythagorean Theorem"
 ];
 
-const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
-
 const Explainer: React.FC<ExplainerProps> = ({ onInteraction }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     { role: 'assistant', content: "Hi! I'm EduGenie, your AI Study Buddy. I can explain any concept, simplify your notes, or help you brainstorm ideas. What are we learning today?" }
@@ -26,6 +24,11 @@ const Explainer: React.FC<ExplainerProps> = ({ onInteraction }) => {
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const conversationHistoryRef = useRef<ChatMessage[]>([]);
+
+  // Preload model on mount to reduce TTFT
+  useEffect(() => {
+    preloadModel();
+  }, []);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -44,56 +47,34 @@ const Explainer: React.FC<ExplainerProps> = ({ onInteraction }) => {
     setIsTyping(true);
     if (onInteraction) onInteraction();
 
+    // Create a placeholder for the assistant response
+    setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+    let fullResponse = '';
+
     try {
       const context = conversationHistoryRef.current
+        .slice(0, -1) // Exclude the just-added user message
         .map(msg => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`)
         .join('\n\n');
 
-      const prompt = `${context}\n\nUser: ${textToSend}\n\nAssistant:`;
-
-      const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: OLLAMA_MODEL,
-          prompt: prompt,
-          stream: true,
-          system: "You are a friendly, world-class academic tutor. Use the Feynman Technique. Encourage follow-up questions.",
-          options: { temperature: 0.8 },
-        }),
+      await explainConcept(textToSend, context, (token) => {
+        fullResponse += token;
+        setMessages(prev => {
+          const updated = [...prev];
+          // Update the last message (which is our placeholder)
+          updated[updated.length - 1] = { role: 'assistant', content: fullResponse };
+          return updated;
+        });
       });
 
-      if (!response.ok) throw new Error('Ollama API error');
-
-      setMessages(prev => [...prev, { role: 'assistant', content: '' }]);
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullResponse = '';
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value);
-          const lines = chunk.split('\n').filter(line => line.trim());
-          for (const line of lines) {
-            try {
-              const data = JSON.parse(line);
-              if (data.response) {
-                fullResponse += data.response;
-                setMessages(prev => {
-                  const updated = [...prev];
-                  updated[updated.length - 1] = { role: 'assistant', content: fullResponse };
-                  return updated;
-                });
-              }
-            } catch (e) { }
-          }
-        }
-      }
       conversationHistoryRef.current.push({ role: 'assistant', content: fullResponse });
     } catch (error) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "Oops! Ollama isn't responding. Is it running?" }]);
+      console.error("Explainer error:", error);
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: 'assistant', content: "Oops! I'm having trouble connecting to my brain (Ollama). Please ensure Ollama is running." };
+        return updated;
+      });
     } finally {
       setIsTyping(false);
     }

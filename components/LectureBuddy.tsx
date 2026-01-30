@@ -1,5 +1,5 @@
-
 import React, { useState, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { summarizeLecture } from '../services/ai';
 
 interface LectureBuddyProps {
@@ -7,7 +7,6 @@ interface LectureBuddyProps {
 }
 
 const LectureBuddy: React.FC<LectureBuddyProps> = ({ onProcessed }) => {
-    const [youtubeUrl, setYoutubeUrl] = useState('');
     const [transcript, setTranscript] = useState('');
     const [summary, setSummary] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -23,15 +22,11 @@ const LectureBuddy: React.FC<LectureBuddyProps> = ({ onProcessed }) => {
             if (mediaFile) {
                 // Process Audio/Video with Gemini (Multimodal)
                 result = await summarizeLecture(mediaFile.data, 'media', mediaFile.type);
-            } else if (youtubeUrl.trim() && !transcript.trim()) {
-                // Guide user to provide transcript or try to fetch (if possible)
-                result = "To summarize this YouTube video, please copy the transcript from YouTube (Under '...' -> 'Show Transcript') and paste it into the Transcript box below. I'm ready to analyze it!";
-                setTranscript('');
             } else if (transcript.trim()) {
                 // Process Text Transcript
                 result = await summarizeLecture(transcript, 'text');
             } else {
-                alert("Please provide a transcript, a video link, or upload an audio/video file.");
+                alert("Please provide a transcript or upload an audio/video file.");
                 setIsLoading(false);
                 return;
             }
@@ -57,7 +52,6 @@ const LectureBuddy: React.FC<LectureBuddyProps> = ({ onProcessed }) => {
                 type: file.type,
                 data: base64Data
             });
-            setYoutubeUrl('');
             setTranscript('');
         };
 
@@ -69,7 +63,6 @@ const LectureBuddy: React.FC<LectureBuddyProps> = ({ onProcessed }) => {
     };
 
     const handleClear = () => {
-        setYoutubeUrl('');
         setTranscript('');
         setSummary('');
         setMediaFile(null);
@@ -81,7 +74,7 @@ const LectureBuddy: React.FC<LectureBuddyProps> = ({ onProcessed }) => {
             <header className="flex justify-between items-end">
                 <div>
                     <h2 className="text-3xl font-display font-bold text-slate-800">Lecture Buddy</h2>
-                    <p className="text-slate-500 mt-2">Summarize YouTube lectures, Zoom recordings, or classroom audio in seconds.</p>
+                    <p className="text-slate-500 mt-2">Summarize Zoom recordings or classroom audio in seconds.</p>
                 </div>
                 <button onClick={handleClear} className="px-4 py-2 text-rose-500 font-semibold hover:bg-rose-50 rounded-xl transition-all">
                     Clear All
@@ -91,21 +84,6 @@ const LectureBuddy: React.FC<LectureBuddyProps> = ({ onProcessed }) => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 {/* Left Column: Input Modes */}
                 <div className="lg:col-span-5 space-y-6">
-                    {/* YouTube Section */}
-                    <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 space-y-4">
-                        <div className="flex items-center space-x-3 text-rose-600">
-                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" /></svg>
-                            <h3 className="font-bold text-slate-800">YouTube Video</h3>
-                        </div>
-                        <input
-                            type="text"
-                            value={youtubeUrl}
-                            onChange={(e) => { setYoutubeUrl(e.target.value); setMediaFile(null); }}
-                            placeholder="Paste YouTube Link..."
-                            className="w-full px-4 py-3 bg-slate-50 rounded-xl border border-slate-200 outline-none focus:border-rose-300 transition-all font-medium"
-                        />
-                    </div>
-
                     {/* Media Upload Section */}
                     <div className="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 space-y-4">
                         <div className="flex items-center space-x-3 text-indigo-600">
@@ -157,7 +135,7 @@ const LectureBuddy: React.FC<LectureBuddyProps> = ({ onProcessed }) => {
 
                     <button
                         onClick={handleProcess}
-                        disabled={isLoading || (!youtubeUrl && !mediaFile && !transcript)}
+                        disabled={isLoading || (!mediaFile && !transcript)}
                         className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all disabled:opacity-50"
                     >
                         {isLoading ? 'Wait, Analyzying Lecture...' : 'Process Lecture'}
@@ -174,11 +152,7 @@ const LectureBuddy: React.FC<LectureBuddyProps> = ({ onProcessed }) => {
                                     <h3 className="text-2xl font-display font-bold">Lecture Analysis</h3>
                                 </div>
                                 <div className="prose prose-slate prose-lg max-w-none prose-headings:text-slate-800 prose-p:text-slate-600 prose-li:text-slate-600 prose-strong:text-indigo-600">
-                                    {summary.split('\n').map((line, i) => {
-                                        if (line.startsWith('#')) return <h3 key={i} className="font-display font-bold text-xl mt-6 mb-2">{line.replace(/#/g, '').trim()}</h3>;
-                                        if (line.startsWith('-') || line.startsWith('*')) return <li key={i} className="ml-4 mb-1">{line.replace(/[-*]/, '').trim()}</li>;
-                                        return <p key={i} className="mb-2">{line}</p>;
-                                    })}
+                                    <ReactMarkdown>{summary}</ReactMarkdown>
                                 </div>
                                 <div className="mt-8 p-6 bg-indigo-50 rounded-3xl border border-indigo-100 text-center">
                                     <p className="text-indigo-900 font-bold mb-2">Want to test your knowledge?</p>
@@ -193,7 +167,7 @@ const LectureBuddy: React.FC<LectureBuddyProps> = ({ onProcessed }) => {
                                 </div>
                                 <div>
                                     <h4 className="text-lg font-bold text-slate-400">Analysis Pending</h4>
-                                    <p className="text-slate-400 text-sm">Upload a lecture file or paste a link to see the magic happen.</p>
+                                    <p className="text-slate-400 text-sm">Upload a lecture file to see the magic happen.</p>
                                 </div>
                             </div>
                         )}

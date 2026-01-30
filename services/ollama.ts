@@ -45,20 +45,20 @@ const callOllama = async (request: OllamaGenerateRequest): Promise<string> => {
     if (!response.ok) {
       const errorText = await response.text().catch(() => 'Unknown error');
       console.error('Ollama API error:', response.status, errorText);
-      
+
       if (response.status === 404) {
         throw new Error(`Model "${request.model}" not found. Please install it with: ollama pull ${request.model}`);
       }
-      
+
       throw new Error(`Ollama API error: ${response.status} ${response.statusText}. ${errorText.substring(0, 200)}`);
     }
 
     const data: OllamaResponse = await response.json();
-    
+
     if (!data.response) {
       throw new Error('Ollama returned empty response');
     }
-    
+
     return data.response;
   } catch (error) {
     if (error instanceof Error && error.message.includes('not found')) {
@@ -70,58 +70,172 @@ const callOllama = async (request: OllamaGenerateRequest): Promise<string> => {
 };
 
 /**
+ * Call Ollama API with streaming support
+ */
+const streamOllama = async (
+  request: OllamaGenerateRequest,
+  onToken?: (token: string) => void
+): Promise<string> => {
+  try {
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...request,
+        stream: true, // Enable streaming
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => 'Unknown error');
+      console.error('Ollama API error:', response.status, errorText);
+      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+    }
+
+    if (!onToken) {
+      // If no callback, just wait for full response (not ideal for this function but acts as fallback)
+      // Actually, if no onToken is provided, we might as well just accumulate.
+      // But usually callOllama is better for non-streaming.
+    }
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    let fullResponse = '';
+
+    if (reader) {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        // Ollama sends multiple JSON objects in one chunk sometimes
+        const lines = chunk.split('\n').filter(line => line.trim() !== '');
+
+        for (const line of lines) {
+          try {
+            const json = JSON.parse(line);
+            if (json.response) {
+              const token = json.response;
+              fullResponse += token;
+              if (onToken) onToken(token);
+            }
+            if (json.done) {
+              // Final statistics could be used here
+            }
+          } catch (e) {
+            console.error('Error parsing JSON chunk', e);
+          }
+        }
+      }
+    }
+
+    return fullResponse;
+  } catch (error) {
+    console.error('Ollama streaming failed:', error);
+    throw error;
+  }
+};
+
+/**
+ * Preload the model into memory to reduce TTFT for the first user request.
+ * Sends an empty prompt to force model loading.
+ */
+export const preloadModel = async (): Promise<void> => {
+  try {
+    console.log(`Preloading model ${OLLAMA_MODEL}...`);
+    // 'keep_alive' option can be used in newer Ollama versions to keep it loaded longer
+    await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        prompt: "", // Empty prompt just to load model
+        stream: false
+      }),
+    });
+    console.log('Model preloaded successfully.');
+  } catch (e) {
+    console.warn('Failed to preload model (ignorable):', e);
+  }
+};
+
+/**
  * Explain a concept to a student
  */
-export const explainConcept = async (topic: string, context: string = ''): Promise<string> => {
+export const explainConcept = async (
+  topic: string,
+  context: string = '',
+  onToken?: (token: string) => void
+): Promise<string> => {
   const prompt = `Explain the following concept to a student: "${topic}". 
   ${context ? `Use this context: ${context}.` : ''} 
   Provide a simple, clear explanation with examples. Use Markdown formatting for headings and lists.`;
 
-  return await callOllama({
+  const request: OllamaGenerateRequest = {
     model: OLLAMA_MODEL,
     prompt,
     options: {
       temperature: 0.7,
     },
     system: "You are a world-class tutor who excels at simplifying complex topics using analogies and clear language."
-  });
+  };
+
+  if (onToken) {
+    return await streamOllama(request, onToken);
+  }
+
+  return await callOllama(request);
 };
 
 /**
  * Summarize study notes
  */
-export const summarizeNotes = async (notes: string): Promise<string> => {
+export const summarizeNotes = async (notes: string, onToken?: (token: string) => void): Promise<string> => {
   const prompt = `Summarize these study notes into clear bullet points and highlight the most important concepts:\n\n${notes}`;
 
-  return await callOllama({
+  const request: OllamaGenerateRequest = {
     model: OLLAMA_MODEL,
     prompt,
     options: {
       temperature: 0.3,
     },
     system: "You are a professional note-taker. Extract the core essence of the provided text while maintaining factual accuracy."
-  });
+  };
+
+  if (onToken) {
+    return await streamOllama(request, onToken);
+  }
+
+  return await callOllama(request);
 };
 
 /**
  * Summarize text from an image (OCR + summarization)
  * Uses the configured vision model (default: llava)
  */
-export const summarizeImage = async (base64Data: string, _mimeType: string): Promise<string> => {
+export const summarizeImage = async (base64Data: string, _mimeType: string, onToken?: (token: string) => void): Promise<string> => {
   try {
     const visionModel = process.env.OLLAMA_VISION_MODEL || 'llava';
 
     // Ensure we send raw base64 without data URL prefix if present
     const base64Clean = base64Data.replace(/^data:image\/[a-z]+;base64,/, "");
 
-    return await callOllama({
+    const request: OllamaGenerateRequest = {
       model: visionModel,
       prompt: "Extract the text from this image of notes and summarize it into clear bullet points. Highlight key terms and main takeaways.",
       images: [base64Clean],
       options: {
         temperature: 0.3,
       },
-    });
+    }
+
+    if (onToken) {
+      return await streamOllama(request, onToken);
+    }
+
+    return await callOllama(request);
   } catch (error) {
     console.error('Image processing failed:', error);
     return "Failed to process the image. Make sure you have a vision model like 'llava' installed in Ollama.";
@@ -175,19 +289,19 @@ Each flashcard must have exactly two fields: "front" and "back".`;
       // If direct parse fails, try to extract JSON array from response
       const startIndex = response.indexOf('[');
       const endIndex = response.lastIndexOf(']') + 1;
-      
+
       if (startIndex === -1 || endIndex <= startIndex) {
         console.error('No JSON array found in Ollama response:', response.substring(0, 200));
         throw new Error('AI returned invalid format (no array found).');
       }
-      
+
       const jsonStr = response.substring(startIndex, endIndex);
       parsed = JSON.parse(jsonStr);
     }
-    
+
     // Handle various Ollama response formats
     let rawJson: any[] = [];
-    
+
     if (Array.isArray(parsed)) {
       // Direct array format (most common with JSON schema)
       rawJson = parsed;
@@ -203,7 +317,7 @@ Each flashcard must have exactly two fields: "front" and "back".`;
     } else {
       throw new Error('AI response parsed but is not an array.');
     }
-    
+
     // Filter and extract actual card data
     const cards = rawJson
       .filter((item: any) => {
@@ -219,11 +333,11 @@ Each flashcard must have exactly two fields: "front" and "back".`;
         }
         return item;
       });
-    
+
     if (cards.length === 0) {
       throw new Error('No valid flashcards found in response.');
     }
-    
+
     return cards.map((item: any, index: number) => ({
       front: String(item.front || ''),
       back: String(item.back || ''),
@@ -289,19 +403,19 @@ Each question must have: "question", "options" (array of 4 strings), "correctAns
       // If direct parse fails, try to extract JSON array from response
       const startIndex = response.indexOf('[');
       const endIndex = response.lastIndexOf(']') + 1;
-      
+
       if (startIndex === -1 || endIndex <= startIndex) {
         console.error('No JSON array found in Ollama response:', response.substring(0, 200));
         throw new Error('AI returned invalid format (no array found).');
       }
-      
+
       const jsonStr = response.substring(startIndex, endIndex);
       parsed = JSON.parse(jsonStr);
     }
-    
+
     // Handle various Ollama response formats
     let rawJson: any[] = [];
-    
+
     if (Array.isArray(parsed)) {
       // Direct array format (most common with JSON schema)
       rawJson = parsed;
@@ -317,7 +431,7 @@ Each question must have: "question", "options" (array of 4 strings), "correctAns
     } else {
       throw new Error('AI response parsed but is not an array.');
     }
-    
+
     // Filter and extract actual question data
     const questions = rawJson
       .filter((item: any) => {
@@ -333,11 +447,11 @@ Each question must have: "question", "options" (array of 4 strings), "correctAns
         }
         return item;
       });
-    
+
     if (questions.length === 0) {
       throw new Error('No valid quiz questions found in response.');
     }
-    
+
     return questions.map((item: any, index: number) => ({
       question: String(item.question || ''),
       options: Array.isArray(item.options) ? item.options.map((opt: any) => String(opt)) : [],

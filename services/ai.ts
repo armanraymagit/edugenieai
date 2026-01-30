@@ -11,20 +11,24 @@ import { Flashcard, QuizQuestion } from '../types';
  * GEMINI COMPLETELY REMOVED.
  */
 
-export const explainConcept = async (topic: string, context: string = ''): Promise<string> => {
+export const explainConcept = async (topic: string, context: string = '', onToken?: (token: string) => void): Promise<string> => {
     // Stick with Ollama for chat to keep it local if possible, 
     // or we could use HF here too. Given user asked for "locally or whatever is best",
     // HF Inference API is often "best" in quality, Ollama is best for "local".
     // I'll keep Ollama as default for the Chatbot (Explainer) since it's already working well.
-    return Ollama.explainConcept(topic, context);
+    return Ollama.explainConcept(topic, context, onToken);
 };
 
-export const summarizeNotes = async (notes: string): Promise<string> => {
-    return Ollama.summarizeNotes(notes);
+export const preloadModel = async (): Promise<void> => {
+    return Ollama.preloadModel();
 };
 
-export const summarizeImage = async (base64Data: string, mimeType: string): Promise<string> => {
-    return Ollama.summarizeImage(base64Data, mimeType);
+export const summarizeNotes = async (notes: string, onToken?: (token: string) => void): Promise<string> => {
+    return Ollama.summarizeNotes(notes, onToken);
+};
+
+export const summarizeImage = async (base64Data: string, mimeType: string, onToken?: (token: string) => void): Promise<string> => {
+    return Ollama.summarizeImage(base64Data, mimeType, onToken);
 };
 
 /**
@@ -32,7 +36,7 @@ export const summarizeImage = async (base64Data: string, mimeType: string): Prom
  */
 export const generateFlashcards = async (topic: string, content: string, count: number = 5, includeImages: boolean = false): Promise<Flashcard[]> => {
     const cards = await Ollama.generateFlashcards(topic, content, count, includeImages);
-    
+
     // If images are requested, enhance cards with images using HuggingFace (Ollama doesn't generate images)
     if (includeImages && cards.length > 0) {
         try {
@@ -43,8 +47,8 @@ export const generateFlashcards = async (topic: string, content: string, count: 
             );
             return cards.map((card, index) => ({
                 ...card,
-                imageUrl: images[index].status === 'fulfilled' && images[index].value 
-                    ? images[index].value 
+                imageUrl: images[index].status === 'fulfilled' && images[index].value
+                    ? images[index].value
                     : undefined
             }));
         } catch (error) {
@@ -53,7 +57,7 @@ export const generateFlashcards = async (topic: string, content: string, count: 
             return cards;
         }
     }
-    
+
     return cards;
 };
 
@@ -62,7 +66,7 @@ export const generateFlashcards = async (topic: string, content: string, count: 
  */
 export const generateQuiz = async (topic: string, content: string, count: number = 5, includeImages: boolean = false): Promise<QuizQuestion[]> => {
     const questions = await Ollama.generateQuiz(topic, content, count, includeImages);
-    
+
     // If images are requested, enhance questions with images using HuggingFace (Ollama doesn't generate images)
     if (includeImages && questions.length > 0) {
         try {
@@ -73,8 +77,8 @@ export const generateQuiz = async (topic: string, content: string, count: number
             );
             return questions.map((question, index) => ({
                 ...question,
-                imageUrl: images[index].status === 'fulfilled' && images[index].value 
-                    ? images[index].value 
+                imageUrl: images[index].status === 'fulfilled' && images[index].value
+                    ? images[index].value
                     : undefined
             }));
         } catch (error) {
@@ -83,7 +87,7 @@ export const generateQuiz = async (topic: string, content: string, count: number
             return questions;
         }
     }
-    
+
     return questions;
 };
 
