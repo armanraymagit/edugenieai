@@ -69,6 +69,42 @@ Use Google's powerful models via API. Best for speed on lower-end devices.
 
 ---
 
+## 3️⃣ Option C: Public Demo via Tunneling (Advanced)
+
+This method allows you to run a public demo of your app (e.g., on Vercel) while using the Ollama instance on your local computer. It works by creating a secure "tunnel" from the internet to your machine.
+
+> **⚠️ Warning:** This exposes a service on your personal computer to the public internet. It is intended for **temporary demos only**. Your PC must remain on, and performance will be limited by your home internet's upload speed.
+
+### Setup Steps
+
+1.  **Install a Tunneling Tool (ngrok)**:
+    - Download `ngrok` from ngrok.com.
+    - Authenticate it using the token from your ngrok dashboard.
+
+2.  **Expose Ollama Port**:
+    Make sure Ollama is running. Then, open a terminal and start the tunnel:
+    ```bash
+    ngrok http 11434
+    ```
+
+3.  **Get Public URL**:
+    `ngrok` will provide a public `https` URL (e.g., `https://random-string.ngrok-free.app`). Copy this URL. **Keep this terminal open.**
+
+4.  **Configure App Code**:
+    Ensure your application's Ollama service file (`services/ollama.ts`) does not hardcode `localhost`. It should use an environment variable:
+    ```typescript
+    const OLLAMA_URL = process.env.NEXT_PUBLIC_OLLAMA_URL || 'http://localhost:11434';
+    ```
+
+5.  **Set Vercel Environment Variable**:
+    - In your Vercel project settings, go to **Environment Variables**.
+    - Add a new variable:
+      - **Key**: `NEXT_PUBLIC_OLLAMA_URL`
+      - **Value**: The `https` URL you copied from ngrok.
+    - Save and **redeploy** your application.
+
+---
+
 ## 🔄 Switching Providers
 
 You can switch between Ollama and Gemini instantly within the application:
@@ -102,4 +138,3 @@ You can switch between Ollama and Gemini instantly within the application:
 *   **Rate Limits**: 
     *   **Gemini 2.0 Flash (Free)**: 15 Requests Per Minute (RPM), 1 Million Tokens Per Minute (TPM).
 *   **Token Limits**: Up to 1 Million tokens per request.
-
