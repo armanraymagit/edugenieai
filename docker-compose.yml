@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: edugenie-ai
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - chromadb
+    networks:
+      - edugenie-network
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: edugenie-chromadb
+    ports:
+      - "8000:8000"
+    volumes:
+      - chroma-data:/chroma/chroma
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    restart: unless-stopped
+    networks:
+      - edugenie-network
+
+volumes:
+  chroma-data:
+    driver: local
+
+networks:
+  edugenie-network:
+    driver: bridge

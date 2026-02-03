@@ -7,6 +7,10 @@ import { defineConfig, loadEnv } from 'vite';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   return {
+    // Base path for GitHub Pages (use repository name)
+    // For custom domain or root deployment, set to '/'
+    base: process.env.VITE_BASE_PATH || '/',
+
     test: {
       globals: true,
       environment: 'jsdom',
@@ -27,6 +31,18 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+      }
+    },
+    build: {
+      // Optimize build for production
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'react-vendor': ['react', 'react-dom'],
+            'markdown': ['react-markdown'],
+            'charts': ['recharts'],
+          }
+        }
       }
     }
   };
