@@ -15,7 +15,7 @@ interface DashboardProps {
   onViewChange: (view: View) => void;
   chartData: any[];
   stats: {
-    studyMinutes: number;
+    studySeconds: number;
     quizzesTaken: number;
     avgScore: number;
   };
@@ -40,8 +40,9 @@ const Dashboard: React.FC<DashboardProps> = ({
     }
   };
 
-  const hours = Math.floor(stats.studyMinutes / 60);
-  const minutes = stats.studyMinutes % 60;
+  const hours = Math.floor(stats.studySeconds / 3600);
+  const minutes = Math.floor((stats.studySeconds % 3600) / 60);
+  const seconds = stats.studySeconds % 60;
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn">
@@ -85,9 +86,11 @@ const Dashboard: React.FC<DashboardProps> = ({
             <p className="text-sm font-medium text-slate-500">Study Time</p>
             <div className="flex items-baseline space-x-1">
               <span className="text-2xl font-bold text-slate-800">{hours}</span>
-              <span className="text-sm font-semibold text-slate-400">h</span>
-              <span className="text-2xl font-bold text-slate-800 ml-1">{minutes}</span>
-              <span className="text-sm font-semibold text-slate-400">m</span>
+              <span className="text-sm font-semibold text-slate-400 mr-2">h</span>
+              <span className="text-2xl font-bold text-slate-800">{minutes}</span>
+              <span className="text-sm font-semibold text-slate-400 mr-2">m</span>
+              <span className="text-2xl font-bold text-slate-800">{seconds}</span>
+              <span className="text-sm font-semibold text-slate-400">s</span>
             </div>
           </div>
         </div>
@@ -129,7 +132,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
         <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center justify-between">
           Feature Usage
-          <span className="text-sm font-normal text-slate-400">Minutes spent</span>
+          <span className="text-sm font-normal text-slate-400">Time spent</span>
         </h3>
         <div className="space-y-3">
           {Object.entries(viewUsage)
@@ -147,8 +150,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
               const totalMinutes = Object.values(viewUsage).reduce((a, b) => a + b, 0);
               const percentage = totalMinutes > 0 ? (minutes / totalMinutes) * 100 : 0;
-              const displayMinutes = Math.round(minutes);
-
               return (
                 <div key={key} className="flex items-center gap-3">
                   <div className="flex-1">
@@ -158,7 +159,8 @@ const Dashboard: React.FC<DashboardProps> = ({
                         <span className="text-sm font-medium text-slate-700">{feature.name}</span>
                       </div>
                       <span className="text-sm font-semibold text-slate-600">
-                        {displayMinutes}m
+                        {Math.floor(minutes / 60) > 0 ? `${Math.floor(minutes / 60)}m ` : ''}
+                        {Math.round(minutes % 60)}s
                       </span>
                     </div>
                     <div className="w-full bg-slate-100 rounded-full h-2">

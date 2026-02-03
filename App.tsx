@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, ViewUsage } from './types';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -10,11 +10,19 @@ import LectureBuddy from './components/LectureBuddy';
 import { preloadModel } from './services/ai';
 
 // Mobile Header with 3-dot menu
-const MobileHeader: React.FC<{ activeView: View; onViewChange: (view: View) => void }> = ({
-  activeView,
-  onViewChange,
-}) => {
+const MobileHeader: React.FC<{
+  activeView: View;
+  onViewChange: (view: View) => void;
+  studySeconds: number;
+}> = ({ activeView, onViewChange, studySeconds }) => {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const formatTime = (totalSeconds: number) => {
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return `${h > 0 ? h + 'h ' : ''}${m}m ${s}s`;
+  };
 
   const navItems: { id: View; label: string; icon: React.ReactNode }[] = [
     {
@@ -110,7 +118,14 @@ const MobileHeader: React.FC<{ activeView: View; onViewChange: (view: View) => v
           <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">
             E
           </div>
-          <span className="font-display font-bold text-lg text-indigo-900">EduGenie</span>
+          <div className="flex flex-col">
+            <span className="font-display font-bold text-base text-indigo-900 leading-tight">
+              EduGenie
+            </span>
+            <span className="text-[10px] font-mono font-bold text-indigo-500 leading-tight uppercase">
+              {formatTime(studySeconds)}
+            </span>
+          </div>
         </div>
         <button
           onClick={() => setMenuOpen(!menuOpen)}
@@ -191,7 +206,7 @@ const INITIAL_CHART_DATA = [
 ];
 
 const INITIAL_STATS = {
-  studyMinutes: 0,
+  studySeconds: 0,
   quizzesTaken: 0,
   avgScore: 0,
 };
@@ -207,7 +222,6 @@ const INITIAL_VIEW_USAGE: ViewUsage = {
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>('dashboard');
-  const viewStartTimeRef = useRef<number>(0);
 
   // Initialize state from localStorage or defaults
   const [chartData, setChartData] = useState(() => {
@@ -225,21 +239,21 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved).viewUsage || INITIAL_VIEW_USAGE : INITIAL_VIEW_USAGE;
   });
 
-  const updateStudyProgress = (minutesToAdd: number) => {
+  const updateStudyProgress = (secondsToAdd: number) => {
     const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const today = days[new Date().getDay()];
 
-    setStats((prev) => ({
+    setStats((prev: any) => ({
       ...prev,
-      studyMinutes: prev.studyMinutes + minutesToAdd,
+      studySeconds: (prev.studySeconds || 0) + secondsToAdd,
     }));
 
-    setChartData((prev) =>
+    setChartData((prev: any[]) =>
       prev.map((item) => {
         if (item.name === today) {
           // We store hours in the chart for better visual scale
-          const currentMinutes = (item.hours || 0) * 60;
-          const newHours = parseFloat(((currentMinutes + minutesToAdd) / 60).toFixed(2));
+          const currentSeconds = (item.hours || 0) * 3600;
+          const newHours = parseFloat(((currentSeconds + secondsToAdd) / 3600).toFixed(4));
           return { ...item, hours: newHours };
         }
         return item;
@@ -252,30 +266,20 @@ const App: React.FC = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ chartData, stats, viewUsage }));
   }, [chartData, stats, viewUsage]);
 
-  // Track time spent on each view
+  // Track time spent on each view in real-time
   useEffect(() => {
-    // Update time for previous view
-    const updateViewTime = () => {
-      const timeSpentMs = Date.now() - viewStartTimeRef.current;
-      const timeSpentMinutes = timeSpentMs / 60000;
-
+    const interval = setInterval(() => {
       // Update view usage
       setViewUsage((prev) => ({
         ...prev,
-        [activeView]: prev[activeView] + timeSpentMinutes,
+        [activeView]: (prev[activeView] || 0) + 1,
       }));
 
       // Update total study time
-      updateStudyProgress(timeSpentMinutes);
-    };
+      updateStudyProgress(1);
+    }, 1000);
 
-    // Reset timer when view changes
-    viewStartTimeRef.current = Date.now();
-
-    // Update time when component unmounts or view changes
-    return () => {
-      updateViewTime();
-    };
+    return () => clearInterval(interval);
   }, [activeView]);
 
   // Preload AI model to reduce TTFT
@@ -316,7 +320,7 @@ const App: React.FC = () => {
             onViewChange={setActiveView}
             chartData={chartData}
             stats={{
-              studyMinutes: stats.studyMinutes,
+              studySeconds: stats.studySeconds,
               quizzesTaken: stats.quizzesTaken,
               avgScore: stats.avgScore,
             }}
@@ -349,10 +353,18 @@ const App: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900">
-      <Sidebar activeView={activeView} onViewChange={setActiveView} />
+      <Sidebar
+        activeView={activeView}
+        onViewChange={setActiveView}
+        studySeconds={stats.studySeconds}
+      />
 
       <main className="flex-1 flex flex-col min-h-screen lg:ml-64 transition-all">
-        <MobileHeader activeView={activeView} onViewChange={setActiveView} />
+        <MobileHeader
+          activeView={activeView}
+          onViewChange={setActiveView}
+          studySeconds={stats.studySeconds}
+        />
 
         <div className="flex-1 overflow-y-auto p-4 md:p-8 pb-20 md:pb-8">{renderView()}</div>
 

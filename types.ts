@@ -31,12 +31,12 @@ export type View =
   | 'lectureBuddy';
 
 export interface ViewUsage {
-  dashboard: number;
-  explainer: number;
-  summarizer: number;
-  flashcards: number;
-  quiz: number;
-  lectureBuddy: number;
+  dashboard: number; // in seconds
+  explainer: number; // in seconds
+  summarizer: number; // in seconds
+  flashcards: number; // in seconds
+  quiz: number; // in seconds
+  lectureBuddy: number; // in seconds
 }
 
 export interface ChatMessage {
