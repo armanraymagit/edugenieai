@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, ViewUsage } from '../types';
+import DocumentUpload from './DocumentUpload';
+import { initializeVectorDb } from '../services/vectorDb';
 import {
   BarChart,
   Bar,
@@ -30,6 +32,23 @@ const Dashboard: React.FC<DashboardProps> = ({
   viewUsage,
   onReset,
 }) => {
+  const [docCount, setDocCount] = useState<number>(0);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const vectorDb = await initializeVectorDb();
+      const dbStats = await vectorDb.getStats();
+      setDocCount(dbStats.count);
+    } catch (error) {
+      console.warn('Failed to fetch vector DB stats:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchStats();
+  }, [fetchStats]);
+
   const handleResetClick = () => {
     if (
       window.confirm(
@@ -70,7 +89,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       </header>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center space-x-4 transition-all hover:shadow-md">
           <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,6 +113,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             </div>
           </div>
         </div>
+
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center space-x-4 transition-all hover:shadow-md">
           <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -106,10 +126,11 @@ const Dashboard: React.FC<DashboardProps> = ({
             </svg>
           </div>
           <div>
-            <p className="text-sm font-medium text-slate-500">Quizzes Taken</p>
+            <p className="text-sm font-medium text-slate-500">Quizzes</p>
             <p className="text-2xl font-bold text-slate-800">{stats.quizzesTaken}</p>
           </div>
         </div>
+
         <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center space-x-4 transition-all hover:shadow-md">
           <div className="w-12 h-12 bg-amber-100 rounded-2xl flex items-center justify-center text-amber-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -126,204 +147,220 @@ const Dashboard: React.FC<DashboardProps> = ({
             <p className="text-2xl font-bold text-slate-800">{stats.avgScore}%</p>
           </div>
         </div>
-      </div>
 
-      {/* Feature Usage Breakdown */}
-      <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-        <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center justify-between">
-          Feature Usage
-          <span className="text-sm font-normal text-slate-400">Time spent</span>
-        </h3>
-        <div className="space-y-3">
-          {Object.entries(viewUsage)
-            .filter(([key]) => key !== 'dashboard')
-            .map(([key, minutes]) => {
-              const feature = {
-                explainer: { name: 'AI Explainer', color: 'indigo', icon: '💡' },
-                summarizer: { name: 'Note Summarizer', color: 'emerald', icon: '📄' },
-                flashcards: { name: 'Flashcards', color: 'purple', icon: '🎴' },
-                quiz: { name: 'Quiz Master', color: 'amber', icon: '✅' },
-                lectureBuddy: { name: 'Lecture Buddy', color: 'rose', icon: '🎥' },
-              }[key as keyof ViewUsage];
-
-              if (!feature) return null;
-
-              const totalMinutes = Object.values(viewUsage).reduce((a, b) => a + b, 0);
-              const percentage = totalMinutes > 0 ? (minutes / totalMinutes) * 100 : 0;
-              return (
-                <div key={key} className="flex items-center gap-3">
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{feature.icon}</span>
-                        <span className="text-sm font-medium text-slate-700">{feature.name}</span>
-                      </div>
-                      <span className="text-sm font-semibold text-slate-600">
-                        {Math.floor(minutes / 60) > 0 ? `${Math.floor(minutes / 60)}m ` : ''}
-                        {Math.round(minutes % 60)}s
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2">
-                      <div
-                        className={`bg-${feature.color}-500 h-2 rounded-full transition-all duration-500`}
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex items-center space-x-4 transition-all hover:shadow-md">
+          <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+              />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-slate-500">Knowledge Hub</p>
+            <p className="text-2xl font-bold text-slate-800">
+              {docCount} <span className="text-sm font-normal text-slate-400">chunks</span>
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Progress Chart */}
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-          <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center justify-between">
-            Weekly Activity
-            <span className="text-sm font-normal text-slate-400">Hours spent</span>
-          </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="name"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#94a3b8', fontSize: 12 }}
-                  dy={10}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Knowledge Hub - Left Col */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+            <h3 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+              <svg
+                className="w-5 h-5 text-indigo-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
                 />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 12 }} />
-                <Tooltip
-                  cursor={{ fill: '#f8fafc' }}
-                  contentStyle={{
-                    borderRadius: '12px',
-                    border: 'none',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                  }}
-                  formatter={(value: any) => [`${value} hrs`, 'Study Time']}
-                />
-                <Bar dataKey="hours" radius={[6, 6, 6, 6]} barSize={32}>
-                  {chartData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.hours > 2 ? '#4f46e5' : '#818cf8'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+              </svg>
+              Indexing Service
+            </h3>
+            <p className="text-sm text-slate-500 mb-6">
+              Drop PDFs, Excel, CSVs or Images to index them into your personal AI knowledge base.
+            </p>
+            <DocumentUpload onUploadComplete={fetchStats} />
+          </div>
+
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+            <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center justify-between">
+              Weekly Activity
+              <span className="text-sm font-normal text-slate-400">Hours spent</span>
+            </h3>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#94a3b8', fontSize: 12 }}
+                    dy={10}
+                  />
+                  <YAxis
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#94a3b8', fontSize: 12 }}
+                  />
+                  <Tooltip
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{
+                      borderRadius: '12px',
+                      border: 'none',
+                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                    }}
+                    formatter={(value: any) => [`${value} hrs`, 'Study Time']}
+                  />
+                  <Bar dataKey="hours" radius={[6, 6, 6, 6]} barSize={32}>
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.hours > 2 ? '#4f46e5' : '#818cf8'} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="space-y-6">
-          <h3 className="text-lg font-bold text-slate-800">Quick Actions</h3>
-          <div className="grid grid-cols-1 gap-4">
-            <button
-              onClick={() => onViewChange('explainer')}
-              className="group bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all flex items-center justify-between text-left"
-            >
-              <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.364-6.364l-.707-.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-bold text-slate-700">Explain a Concept</p>
-                  <p className="text-xs text-slate-400">
-                    Stuck on a topic? Get a simple explanation.
-                  </p>
-                </div>
-              </div>
-              <svg
-                className="w-5 h-5 text-slate-300 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
+        {/* Right Column: Usage & Actions */}
+        <div className="space-y-8">
+          <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+            <h3 className="text-lg font-bold text-slate-800 mb-6 flex items-center justify-between">
+              Feature Usage
+              <span className="text-sm font-normal text-slate-400">Time spent</span>
+            </h3>
+            <div className="space-y-3">
+              {Object.entries(viewUsage)
+                .filter(([key]) => key !== 'dashboard')
+                .map(([key, minutes]) => {
+                  const feature = {
+                    explainer: { name: 'AI Explainer', color: 'indigo', icon: '💡' },
+                    summarizer: { name: 'Note Summarizer', color: 'emerald', icon: '📄' },
+                    flashcards: { name: 'Flashcards', color: 'purple', icon: '🎴' },
+                    quiz: { name: 'Quiz Master', color: 'amber', icon: '✅' },
+                    lectureBuddy: { name: 'Lecture Buddy', color: 'rose', icon: '🎥' },
+                  }[key as keyof ViewUsage];
 
-            <button
-              onClick={() => onViewChange('summarizer')}
-              className="group bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-emerald-200 transition-all flex items-center justify-between text-left"
-            >
-              <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-bold text-slate-700">Summarize My Notes</p>
-                  <p className="text-xs text-slate-400">Paste your long notes for key takeaways.</p>
-                </div>
-              </div>
-              <svg
-                className="w-5 h-5 text-slate-300 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
+                  if (!feature) return null;
 
-            <button
-              onClick={() => onViewChange('quiz')}
-              className="group bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all flex items-center justify-between text-left"
-            >
-              <div className="flex items-center space-x-4">
-                <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-bold text-slate-700">Take a Quick Quiz</p>
-                  <p className="text-xs text-slate-400">Test your knowledge on any subject.</p>
-                </div>
-              </div>
-              <svg
-                className="w-5 h-5 text-slate-300 group-hover:text-amber-400 group-hover:translate-x-1 transition-all"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+                  const totalMinutes = Object.values(viewUsage).reduce((a, b) => a + b, 0);
+                  const percentage = totalMinutes > 0 ? (minutes / totalMinutes) * 100 : 0;
+                  return (
+                    <div key={key} className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">{feature.icon}</span>
+                            <span className="text-sm font-medium text-slate-700">
+                              {feature.name}
+                            </span>
+                          </div>
+                          <span className="text-sm font-semibold text-slate-600">
+                            {Math.floor(minutes / 60) > 0 ? `${Math.floor(minutes / 60)}m ` : ''}
+                            {Math.round(minutes % 60)}s
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2">
+                          <div
+                            className={`bg-${feature.color}-500 h-2 rounded-full transition-all duration-500`}
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-bold text-slate-800">Quick Actions</h3>
+            <div className="grid grid-cols-1 gap-4">
+              <button
+                onClick={() => onViewChange('explainer')}
+                className="group bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-indigo-200 transition-all flex items-center justify-between text-left"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
-            </button>
+                <div className="flex items-center space-x-4">
+                  <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.364-6.364l-.707-.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-700">Explain a Concept</p>
+                    <p className="text-xs text-slate-400">
+                      Stuck on a topic? Get a simple explanation.
+                    </p>
+                  </div>
+                </div>
+                <svg
+                  className="w-5 h-5 text-slate-300 group-hover:text-indigo-400 group-hover:translate-x-1 transition-all"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+
+              <button
+                onClick={() => onViewChange('quiz')}
+                className="group bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:border-amber-200 transition-all flex items-center justify-between text-left"
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="2"
+                        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-700">Take a Quick Quiz</p>
+                    <p className="text-xs text-slate-400">Test your knowledge on any subject.</p>
+                  </div>
+                </div>
+                <svg
+                  className="w-5 h-5 text-slate-300 group-hover:text-amber-400 group-hover:translate-x-1 transition-all"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 5l7 7-7 7"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>

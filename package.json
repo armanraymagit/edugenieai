@@ -12,10 +12,15 @@
   },
   "dependencies": {
     "@google/genai": "^1.38.0",
+    "@types/papaparse": "^5.5.2",
     "chromadb": "^1.9.2",
+    "mammoth": "^1.11.0",
+    "papaparse": "^5.5.3",
+    "pdfjs-dist": "^5.4.624",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-markdown": "^10.1.0",
+    "read-excel-file": "^6.0.3",
     "recharts": "2.15.0"
   },
   "devDependencies": {
