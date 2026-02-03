@@ -1,41 +1,46 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as ai from '../services/ai';
 import * as Ollama from '../services/ollama';
-import * as HuggingFace from '../services/huggingface';
 
 // Mock the underlying services
 vi.mock('../services/ollama', () => ({
-    explainConcept: vi.fn(),
-    summarizeNotes: vi.fn(),
+  explainConcept: vi.fn(),
+  summarizeNotes: vi.fn(),
+  generateFlashcards: vi.fn(() => Promise.resolve([])),
 }));
 
 vi.mock('../services/huggingface', () => ({
-    generateFlashcards: vi.fn(),
-    generateQuiz: vi.fn(),
-    generateImage: vi.fn(() => Promise.resolve('mock-image-url')),
+  generateFlashcards: vi.fn(),
+  generateQuiz: vi.fn(),
+  generateImage: vi.fn(() => Promise.resolve('mock-image-url')),
 }));
 
 describe('AI Coordination Service (services/ai.ts)', () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
-    it('delegates flashcard generation to Hugging Face by default', async () => {
-        await ai.generateFlashcards('History', 'The French Revolution', 3, true);
+  it('delegates flashcard generation to Ollama', async () => {
+    await ai.generateFlashcards('History', 'The French Revolution', 3, true);
 
-        expect(HuggingFace.generateFlashcards).toHaveBeenCalledWith('History', 'The French Revolution', 3, true);
-    });
+    expect(Ollama.generateFlashcards).toHaveBeenCalledWith(
+      'History',
+      'The French Revolution',
+      3,
+      true
+    );
+  });
 
-    it('uses Ollama for concept explanation', async () => {
-        await ai.explainConcept('Science', 'Photosynthesis');
+  it('uses Ollama for concept explanation', async () => {
+    await ai.explainConcept('Science', 'Photosynthesis');
 
-        expect(Ollama.explainConcept).toHaveBeenCalledWith('Science', 'Photosynthesis');
-    });
+    expect(Ollama.explainConcept).toHaveBeenCalledWith('Science', 'Photosynthesis', undefined);
+  });
 
-    it('can enhance flashcards with images', async () => {
-        const mockCard = { id: '1', front: 'Concept', back: 'Definition' };
-        const enhanced = await ai.enhanceFlashcardWithImage(mockCard);
+  it('can enhance flashcards with images', async () => {
+    const mockCard = { id: '1', front: 'Concept', back: 'Definition' };
+    const enhanced = await ai.enhanceFlashcardWithImage(mockCard);
 
-        expect(enhanced.imageUrl).toBe('mock-image-url');
-    });
+    expect(enhanced.imageUrl).toBe('mock-image-url');
+  });
 });
