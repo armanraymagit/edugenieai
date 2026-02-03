@@ -1,4 +1,3 @@
-
 export interface Flashcard {
   id: string;
   front: string;
@@ -23,7 +22,22 @@ export interface StudyNote {
   timestamp: number;
 }
 
-export type View = 'dashboard' | 'explainer' | 'summarizer' | 'flashcards' | 'quiz' | 'lectureBuddy';
+export type View =
+  | 'dashboard'
+  | 'explainer'
+  | 'summarizer'
+  | 'flashcards'
+  | 'quiz'
+  | 'lectureBuddy';
+
+export interface ViewUsage {
+  dashboard: number;
+  explainer: number;
+  summarizer: number;
+  flashcards: number;
+  quiz: number;
+  lectureBuddy: number;
+}
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
